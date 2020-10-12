@@ -11,7 +11,7 @@ import (
 func foo(channel chan string) {
 	// TODO: Write an infinite loop of sending "pings" and receiving "pongs"
 	message := ""
-	for true {
+	for {
 		message = "ping"
 		channel <- message
 		fmt.Println("Foo is sending:", message)
@@ -26,7 +26,7 @@ func foo(channel chan string) {
 func bar(channel chan string) {
 	// TODO: Write an infinite loop of receiving "pings" and sending "pongs"
 	message := ""
-	for true {
+	for {
 		message = <-channel
 		fmt.Println("Bar has received:", message)
 		message = "pong"
