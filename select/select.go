@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"runtime/trace"
 	"time"
 )
 
@@ -21,12 +24,21 @@ func fastSender(c chan<- int) {
 	}
 }
 
-// main starts the two senders and then goes into an infinite loop of receiving their messages.
-func main() {
-	ints := make(chan int)
+func fasterSender(c chan<- []int) {
+	slice := []int{1, 2, 3}
+	for {
+		time.Sleep(200 * time.Millisecond)
+		c <- slice
+	}
+}
+
+func helper() {
+	ints := make(chan int, 10)
 	go fastSender(ints)
-	strings := make(chan string)
+	strings := make(chan string, 10)
 	go slowSender(strings)
+	slices := make(chan []int, 10)
+	go fasterSender(slices)
 
 	for { // = while(true)
 		select {
@@ -34,6 +46,32 @@ func main() {
 			fmt.Println("Received a string", s)
 		case i := <-ints:
 			fmt.Println("Received an int", i)
+		case sl := <-slices:
+			fmt.Println("Received a slice", sl)
+		default:
+			fmt.Println("--- Nothing to receive, sleeping for 3s...")
+			time.Sleep(3 * time.Second)
 		}
 	}
+}
+
+// main starts the two senders and then goes into an infinite loop of receiving their messages.
+func main() {
+	f, err := os.Create("trace.out")
+	if err != nil {
+		log.Fatalf("failed to create trace output file: %v", err)
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.Fatalf("failed to close trace file: %v", err)
+		}
+	}()
+
+	if err := trace.Start(f); err != nil {
+		log.Fatalf("failed to start trace: %v", err)
+	}
+	defer trace.Stop()
+
+	go helper()
+	time.Sleep(7 * time.Second)
 }
